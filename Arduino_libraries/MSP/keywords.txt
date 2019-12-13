@@ -1,0 +1,10 @@
+MSP	KEYWORD1
+
+begin	KEYWORD2
+send	KEYWORD2
+recv	KEYWORD2
+waitFor	KEYWORD2
+request	KEYWORD2
+command	KEYWORD2
+getActiveModes	KEYWORD2
+
