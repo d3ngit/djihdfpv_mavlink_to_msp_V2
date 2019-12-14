@@ -318,7 +318,7 @@ void mavl_request_data()
     mavlink_message_t msg;
     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 
-    const int  maxStreams = 7;
+    const int  maxStreams = 6;
     const uint8_t MAVStreams[maxStreams] = {MAV_DATA_STREAM_RAW_SENSORS,
         MAV_DATA_STREAM_EXTENDED_STATUS,
         MAV_DATA_STREAM_RC_CHANNELS,
