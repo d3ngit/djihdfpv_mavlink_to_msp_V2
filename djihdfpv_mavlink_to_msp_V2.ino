@@ -270,9 +270,7 @@ void mavl_receive()
     }
 }
 
-char altstr[10];
-char gsstr[10];
-char tmpGSStr[4];
+String cnameStr = "";
 
 void send_msp_to_goggles()
 {
@@ -304,36 +302,29 @@ void send_msp_to_goggles()
     msp.send(MSP_FC_VERSION, &fc_version, sizeof(fc_version));
     
     //MSP_NAME
+    cnameStr = "";
+    strncpy(name.craft_name, craftname, sizeof(name.craft_name));
+    
 #ifdef USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED
-    memset(altstr, 0, sizeof altstr);
-    memset(gsstr, 0, sizeof gsstr);
-    memset(craftname, 0, sizeof craftname);
-    memset(tmpGSStr, 0, sizeof tmpGSStr);
-    craftname[0] = 'A';
-    tmpGSStr[0] = ' ';
-    tmpGSStr[1] = 'S';
-  
+
   #ifdef IMPERIAL_UNITS
-    itoa((uint16_t)(altitude_mav / 0.3048), altstr, 10);
+    cnameStr = cnameStr + "A" + ((uint16_t)(altitude_mav / 0.3048));
   #else  
-    itoa(altitude_mav, altstr, 10);   //base 10
+    cnameStr = cnameStr + "A" + altitude_mav;
   #endif
-  
+
   #ifdef SPEED_IN_KILOMETERS_PER_HOUR
-    itoa((uint16_t)(groundspeed * 3.6), gsstr, 10);
+    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed * 3.6));
   #elif defined(SPEED_IN_MILES_PER_HOUR)
-    itoa((uint16_t)(groundspeed * 2.2369), gsstr, 10);
+    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed * 2.2369));
   #else
-    itoa((uint16_t)(groundspeed), gsstr, 10);
+    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed));             //meters per second
   #endif
   
-    strcat(craftname, altstr);
-    strcat(craftname, tmpGSStr);
-    strcat(craftname, gsstr);
-    strncpy(name.craft_name, craftname, sizeof(name.craft_name));
-#else
-    strncpy(name.craft_name, craftname, sizeof(name.craft_name));
+    cnameStr.toCharArray(name.craft_name,sizeof(name.craft_name));
+
 #endif
+
     msp.send(MSP_NAME, &name, sizeof(name));
     
     //MSP_STATUS
