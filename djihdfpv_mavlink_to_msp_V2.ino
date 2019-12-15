@@ -87,21 +87,10 @@ uint16_t osd_profile_name_pos = 234;
 uint16_t osd_rssi_dbm_value_pos = 234;
 uint16_t osd_rc_channels_pos = 234;
 
+uint32_t previousMillisMSP = 0;
+uint32_t next_interval_MSP = 200;
 
-uint16_t previousMillisMAVLink = 0;
-uint16_t next_interval_MAVLink = 1000;
-uint8_t num_hbts = 60;
-uint8_t num_hbts_elapsed = num_hbts;
-
-uint16_t previousMillisMSP = 0;
-uint16_t next_interval_MSP = 200;
-
-uint8_t sysid = 199;
-uint8_t compid = 50;
-uint8_t type = MAV_TYPE_GCS;
-uint8_t autopilot = MAV_AUTOPILOT_INVALID;
 uint8_t base_mode = MAV_MODE_PREFLIGHT;
-uint32_t custom_mode = 0;
 uint8_t system_status = MAV_STATE_UNINIT;
 
 uint8_t vbat = 0;
@@ -147,9 +136,11 @@ float mAh_calib_factor = MAH_CALIBRATION_FACTOR;
 #else
 float mAh_calib_factor = 1;
 #endif
+uint8_t set_home = 1;
 
 void setup()
 {
+
     Serial.begin(115200);
     msp.begin(Serial);
     mavlinkSerial.begin(57600);
@@ -158,35 +149,12 @@ void setup()
 
 void loop()
 {
-
-    mavlink_message_t msg;
-    uint8_t buf[MAVLINK_MAX_PACKET_LEN];
-
-    mavlink_msg_heartbeat_pack(sysid,compid, &msg, type, autopilot, base_mode, custom_mode, system_status);
-
-    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-
-    //send heartbeat every second 
-    uint16_t currentMillisMAVLink = millis();
-    if (currentMillisMAVLink - previousMillisMAVLink >= next_interval_MAVLink) {
-        previousMillisMAVLink = currentMillisMAVLink;
-
-        mavlinkSerial.write(buf, len);
-
-        //send request streams every 60 seconds
-        num_hbts_elapsed++;
-        if(num_hbts_elapsed >= num_hbts) {
-        mavl_request_data();
-        num_hbts_elapsed=0;
-    }
-
-    }
-
+    //receive mavlink data
     mavl_receive();  
     
-    //send msp 
-    uint16_t currentMillisMSP = millis();
-    if (currentMillisMSP - previousMillisMSP >= next_interval_MSP) {
+    //send MSP data
+    uint32_t currentMillisMSP = millis();
+    if ((uint32_t)(currentMillisMSP - previousMillisMSP) >= next_interval_MSP) {
         previousMillisMSP = currentMillisMSP;
         
         GPS_calculateDistanceAndDirectionToHome();
@@ -197,10 +165,14 @@ void loop()
         mAhDrawn = (uint16_t)f_mAhDrawn;
         dt = millis();
     }
-    
-    if(gps_home_lat != 0 && home_locked == 0){
-        GPS_calc_longitude_scaling(gps_home_lat);
-        home_locked = 1;
+
+    //set GPS home when 3D fix
+    if(fix_type > 2 && set_home == 1){
+      gps_home_lat = gps_lat;
+      gps_home_lon = gps_lon;
+      gps_home_alt = gps_alt;
+      GPS_calc_longitude_scaling(gps_home_lat);
+      set_home = 0;
     }
     
 }
@@ -253,7 +225,8 @@ void mavl_receive()
             altitude_mav = (uint16_t)(global_position_int.relative_alt / 1000); //int32_t in milimeters -> converted to meters
             gps_lat = global_position_int.lat;
             gps_lon = global_position_int.lon;
-            gps_alt = global_position_int.alt;                
+            gps_alt = global_position_int.alt;
+            
            }
            break;
 
@@ -268,28 +241,12 @@ void mavl_receive()
            }
            break;
 
-          case MAVLINK_MSG_ID_GPS_GLOBAL_ORIGIN:  // MAVLINK_MSG_ID_GPS_GLOBAL_ORIGIN
-          {
-            mavlink_gps_global_origin_t gps_global_origin;
-            mavlink_msg_gps_global_origin_decode(&msg, &gps_global_origin);
-            
-            gps_home_lat = gps_global_origin.latitude;
-            gps_home_lon = gps_global_origin.longitude;
-            gps_home_alt = gps_global_origin.altitude;
-                
-           }
-           break;
-
         case MAVLINK_MSG_ID_HEARTBEAT:  // HEARTBEAT
           {
             mavlink_heartbeat_t heartbeat;
             mavlink_msg_heartbeat_decode(&msg, &heartbeat);
 
-            //replying same heartbeat info
             base_mode = heartbeat.base_mode;
-            type = heartbeat.type;
-            autopilot = heartbeat.autopilot;
-            custom_mode = heartbeat.custom_mode;
             system_status = heartbeat.system_status;
             
             }
@@ -310,30 +267,6 @@ void mavl_receive()
       }
     }
 
-    }
-}
-
-void mavl_request_data()
-{
-    mavlink_message_t msg;
-    uint8_t buf[MAVLINK_MAX_PACKET_LEN];
-
-    const int  maxStreams = 6;
-    const uint8_t MAVStreams[maxStreams] = {MAV_DATA_STREAM_RAW_SENSORS,
-        MAV_DATA_STREAM_EXTENDED_STATUS,
-        MAV_DATA_STREAM_RC_CHANNELS,
-        MAV_DATA_STREAM_POSITION,
-        MAV_DATA_STREAM_EXTRA1, 
-        MAV_DATA_STREAM_EXTRA2
-        };
-
-    const uint16_t MAVRates[maxStreams] = {0x02, 0x02, 0x05, 0x02, 0x05, 0x02};
-
-    for (int i=0; i < maxStreams; i++) {
-        mavlink_msg_request_data_stream_pack(2, 200, &msg, 1, 0, MAVStreams[i], MAVRates[i], 1);
-        uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-
-        mavlinkSerial.write(buf, len);
     }
 }
 
@@ -379,11 +312,13 @@ void send_msp_to_goggles()
     craftname[0] = 'A';
     tmpGSStr[0] = ' ';
     tmpGSStr[1] = 'S';
+  
   #ifdef IMPERIAL_UNITS
     itoa((uint16_t)(altitude_mav / 0.3048), altstr, 10);
   #else  
     itoa(altitude_mav, altstr, 10);   //base 10
   #endif
+  
   #ifdef SPEED_IN_KILOMETERS_PER_HOUR
     itoa((uint16_t)(groundspeed * 3.6), gsstr, 10);
   #elif defined(SPEED_IN_MILES_PER_HOUR)
@@ -391,6 +326,7 @@ void send_msp_to_goggles()
   #else
     itoa((uint16_t)(groundspeed), gsstr, 10);
   #endif
+  
     strcat(craftname, altstr);
     strcat(craftname, tmpGSStr);
     strcat(craftname, gsstr);
@@ -442,12 +378,12 @@ void send_msp_to_goggles()
         distanceToHome = (uint16_t)((distanceToHome * 0.000621371192) * 10);  //meters to miles
         attitude.pitch = distanceToHome;
     #else
-    if(distanceToHome > 1000){
-        attitude.pitch = distanceToHome / 100; // switch from m to km when over 1000
-    }
-    else{
-        attitude.pitch = distanceToHome * 10;
-    }
+        if(distanceToHome > 1000){
+            attitude.pitch = distanceToHome / 100; // switch from m to km when over 1000
+        }
+        else{
+            attitude.pitch = distanceToHome * 10;
+        }
     #endif
     attitude.roll = (directionToHome - (heading / 100)) * 10;
 #else
@@ -463,6 +399,7 @@ void send_msp_to_goggles()
     //MSP_OSD_CONFIG
     send_osd_config();
 }
+
 void send_osd_config()
 {
     msp_osd_config_t msp_osd_config;    
