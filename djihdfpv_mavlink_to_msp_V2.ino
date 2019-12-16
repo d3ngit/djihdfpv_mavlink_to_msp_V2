@@ -7,6 +7,7 @@
  *  Softwareserial TX is digital pin 9 connected to ardupilot RX telemetry port(57600)
 */
 
+#define SERIAL_TYPE                                                 0       //0==SoftSerial(Arduino_Nano), 1==HardSerial(others)
 #define MAH_CALIBRATION_FACTOR                                      1.166f  // used to calibrate mAh reading. Matek F405wing ~1.166
 #define SPEED_IN_KILOMETERS_PER_HOUR                                        // if commented out defaults to m/s
 //#define SPEED_IN_MILES_PER_HOUR
@@ -20,10 +21,17 @@
 #include <mavlink_types.h>
 #include <protocol.h>
 #include <MSP.h>
-#include <SoftwareSerial.h>
 #include "MSP_OSD.h"
 
-SoftwareSerial mavlinkSerial(8, 9); // RX, TX
+#if SERIAL_TYPE == 0
+  #include <SoftwareSerial.h>
+  HardwareSerial &mspSerial = Serial;
+  SoftwareSerial mavlinkSerial(8, 9); // RX, TX
+#elif SERIAL_TYPE == 1
+  HardwareSerial &mspSerial = Serial2;
+  HardwareSerial &mavlinkSerial = Serial3;
+#endif
+
 MSP msp;
 
 //OSD item locations
@@ -140,9 +148,9 @@ uint8_t set_home = 1;
 
 void setup()
 {
-
-    Serial.begin(115200);
-    msp.begin(Serial);
+    
+    mspSerial.begin(115200);
+    msp.begin(mspSerial);
     mavlinkSerial.begin(57600);
 
 }
@@ -321,7 +329,7 @@ void send_msp_to_goggles()
     cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed));             //meters per second
   #endif
   
-    cnameStr.toCharArray(name.craft_name,sizeof(name.craft_name));
+    cnameStr.toCharArray(name.craft_name, sizeof(name.craft_name));
 
 #endif
 
