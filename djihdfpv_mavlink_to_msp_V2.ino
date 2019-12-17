@@ -9,6 +9,7 @@
 
 #define SERIAL_TYPE                                                 0       //0==SoftSerial(Arduino_Nano), 1==HardSerial(others)
 #define MAH_CALIBRATION_FACTOR                                      1.166f  // used to calibrate mAh reading. Matek F405wing ~1.166
+#define BATTERY_CELL_COUNT                                          4       //number of battery cells. Used for the average voltage per cell reading.
 #define SPEED_IN_KILOMETERS_PER_HOUR                                        // if commented out defaults to m/s
 //#define SPEED_IN_MILES_PER_HOUR
 #define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //comment out to disable
@@ -96,7 +97,7 @@ uint16_t osd_rssi_dbm_value_pos = 234;
 uint16_t osd_rc_channels_pos = 234;
 
 uint32_t previousMillisMSP = 0;
-uint32_t next_interval_MSP = 200;
+uint32_t next_interval_MSP = 100;
 
 uint8_t base_mode = MAV_MODE_PREFLIGHT;
 uint8_t system_status = MAV_STATE_UNINIT;
@@ -113,7 +114,7 @@ char craftname[12] = "";
 int16_t amperage = 0;
 uint16_t mAhDrawn = 0;
 float f_mAhDrawn = 0.0;
-uint8_t  numSat = 0;
+uint8_t numSat = 0;
 uint8_t pid_roll[3];
 uint8_t pid_pitch[3];
 uint8_t pid_yaw[3]; 
@@ -132,9 +133,9 @@ int16_t distanceToHome = 0;    // distance to home in meters
 int16_t directionToHome = 0;   // direction to home in degrees
 uint8_t fix_type = 0;           // < 0-1: no fix, 2: 2D fix, 3: 3D fix
 uint8_t home_locked = 0;
-uint8_t batteryCellCount = 4;
+uint8_t batteryCellCount = BATTERY_CELL_COUNT;
 uint16_t batteryCapacity = 5200;
-uint8_t legacyBatteryVoltage = 168;
+uint8_t legacyBatteryVoltage = 0;
 uint8_t batteryState = 0;       // voltage color 0==white, 1==red 
 uint16_t batteryVoltage = 0;
 uint16_t heading = 0;
@@ -145,6 +146,9 @@ float mAh_calib_factor = MAH_CALIBRATION_FACTOR;
 float mAh_calib_factor = 1;
 #endif
 uint8_t set_home = 1;
+uint8_t blink_counter = 0;
+uint16_t blink_sats_orig_pos = osd_gps_sats_pos;
+uint16_t blink_sats_blank_pos = 234;
 
 void setup()
 {
@@ -172,6 +176,15 @@ void loop()
         f_mAhDrawn += ((float)amperage * 10.0 * (millis() - dt) / 3600000.0) * mAh_calib_factor;
         mAhDrawn = (uint16_t)f_mAhDrawn;
         dt = millis();
+
+        if(blink_counter > 8 && set_home == 1){
+            invert_pos(&osd_gps_sats_pos, &blink_sats_blank_pos);
+            blink_counter = 0;
+        }
+        else if(set_home == 0){
+            osd_gps_sats_pos = blink_sats_orig_pos;
+        }
+        blink_counter++;        
     }
 
     //set GPS home when 3D fix
@@ -347,11 +360,11 @@ void send_msp_to_goggles()
 
     //MSP_BATTERY_STATE
     battery_state.amperage = amperage;
-    battery_state.batteryVoltage = vbat;
+    battery_state.batteryVoltage = vbat * 10;
     battery_state.mAhDrawn = mAhDrawn;
     battery_state.batteryCellCount = batteryCellCount;
     battery_state.batteryCapacity = batteryCapacity;
-    battery_state.legacyBatteryVoltage = legacyBatteryVoltage;
+    battery_state.legacyBatteryVoltage = (vbat + 5) / 10;
     battery_state.batteryState = batteryState;
     msp.send(MSP_BATTERY_STATE, &battery_state, sizeof(battery_state));
     
@@ -472,6 +485,12 @@ void send_osd_config()
     msp.send(MSP_OSD_CONFIG, &msp_osd_config, sizeof(msp_osd_config));
 }
 
+void invert_pos(uint16_t *pos1, uint16_t *pos2)
+{
+    uint16_t tmp_pos = *pos1;
+    *pos1 = *pos2;
+    *pos2 = tmp_pos;
+}
 
 //from here on code from Betaflight github https://github.com/betaflight/betaflight/blob/c8b5edb415c33916c91a7ccc8bd19c7276540cd1/src/main/io/gps.c
 
