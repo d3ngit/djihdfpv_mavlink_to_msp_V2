@@ -105,7 +105,7 @@ struct msp_osd_config_t {
 } __attribute__ ((packed));
 
 struct msp_name_t {
-    char craft_name[12];    //11 characters max possible displayed in goggles
+    char craft_name[15];                    //15 characters max possible displayed in the goggles
 } __attribute__ ((packed));
 
 struct msp_battery_state_t {

@@ -8,13 +8,13 @@
 */
 
 #define SERIAL_TYPE                                                 0       //0==SoftSerial(Arduino_Nano), 1==HardSerial(others)
-#define MAH_CALIBRATION_FACTOR                                      1.166f  // used to calibrate mAh reading. Matek F405wing ~1.166
-#define BATTERY_CELL_COUNT                                          4       //number of battery cells. Used for the average voltage per cell reading.
-#define SPEED_IN_KILOMETERS_PER_HOUR                                        // if commented out defaults to m/s
+#define MAH_CALIBRATION_FACTOR                                      1.166f  //used to calibrate mAh reading. Matek F405wing ~1.166
+#define SPEED_IN_KILOMETERS_PER_HOUR                                        //if commented out defaults to m/s
 //#define SPEED_IN_MILES_PER_HOUR
-#define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //comment out to disable
+#define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the flight mode only.
 #define USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME             //comment out to disable
 //#define IMPERIAL_UNITS                                                    //Altitude in feet, distance to home in miles.
+#define VEHICLE_TYPE                                                0       //0==Plane, 1==Copter  used for flight modes
 
 #include <checksum.h>
 #include <mavlink.h>
@@ -23,6 +23,7 @@
 #include <protocol.h>
 #include <MSP.h>
 #include "MSP_OSD.h"
+#include "flt_modes.h"
 
 #if SERIAL_TYPE == 0
   #include <SoftwareSerial.h>
@@ -38,18 +39,18 @@ MSP msp;
 //OSD item locations
 //in betaflight configurator set OSD items to your desired positions and in CLI type "set osd" to retreieve the numbers.
 //234 -> not visible.  (0 - 15359) . horizontally 2048-2074(spacing 1), vertically 2048-2528(spacing 32). 26 characters X 15 lines
-uint16_t osd_rssi_value_pos = 2052;
-uint16_t osd_main_batt_voltage_pos = 2071;
+uint16_t osd_rssi_value_pos = 2179;
+uint16_t osd_main_batt_voltage_pos = 234;
 uint16_t osd_crosshairs_pos = 234;
 uint16_t osd_artificial_horizon_pos = 234;
 uint16_t osd_horizon_sidebars_pos = 234;
 uint16_t osd_item_timer_1_pos = 234;
 uint16_t osd_item_timer_2_pos = 234;
 uint16_t osd_flymode_pos = 234;
-uint16_t osd_craft_name_pos = 2497;
+uint16_t osd_craft_name_pos = 2543;
 uint16_t osd_throttle_pos_pos = 234;
 uint16_t osd_vtx_channel_pos = 234;
-uint16_t osd_current_draw_pos = 2103;
+uint16_t osd_current_draw_pos = 2102;
 uint16_t osd_mah_drawn_pos = 2136;
 uint16_t osd_gps_speed_pos = 234;
 uint16_t osd_gps_sats_pos = 2465;
@@ -60,7 +61,7 @@ uint16_t osd_yaw_pids_pos = 234;
 uint16_t osd_power_pos = 234;
 uint16_t osd_pidrate_profile_pos = 234;
 uint16_t osd_warnings_pos = 234;
-uint16_t osd_avg_cell_voltage_pos = 234;
+uint16_t osd_avg_cell_voltage_pos = 2072;
 uint16_t osd_gps_lon_pos = 2113;
 uint16_t osd_gps_lat_pos = 2081;
 uint16_t osd_debug_pos = 234;
@@ -96,11 +97,12 @@ uint16_t osd_profile_name_pos = 234;
 uint16_t osd_rssi_dbm_value_pos = 234;
 uint16_t osd_rc_channels_pos = 234;
 
-uint32_t previousMillisMSP = 0;
+uint32_t previousMillis_MSP = 0;
 uint32_t next_interval_MSP = 100;
 
 uint8_t base_mode = MAV_MODE_PREFLIGHT;
 uint8_t system_status = MAV_STATE_UNINIT;
+uint32_t custom_mode = 0;                       //flight mode
 
 uint8_t vbat = 0;
 float airspeed = 0;
@@ -110,7 +112,7 @@ uint32_t altitude_msp = 0;      // EstimatedAltitudeCm
 uint16_t rssi = 0;
 uint8_t battery_remaining = 0;
 uint32_t flightModeFlags = 0;
-char craftname[12] = "";
+char craftname[15] = "";
 int16_t amperage = 0;
 uint16_t mAhDrawn = 0;
 float f_mAhDrawn = 0.0;
@@ -126,14 +128,12 @@ int32_t gps_home_lat = 0;
 int32_t gps_home_alt = 0;
 int16_t roll_angle = 0;
 int16_t pitch_angle = 0;
-uint8_t is_armed = 0;
 uint8_t escTemperature = 0;     // degrees celsius
 uint8_t rtc_date_time[9] = {20, 20, 01, 01, 00, 00, 00, 00, 00}; //YMDHMSM
 int16_t distanceToHome = 0;    // distance to home in meters
 int16_t directionToHome = 0;   // direction to home in degrees
 uint8_t fix_type = 0;           // < 0-1: no fix, 2: 2D fix, 3: 3D fix
-uint8_t home_locked = 0;
-uint8_t batteryCellCount = BATTERY_CELL_COUNT;
+uint8_t batteryCellCount = 0;
 uint16_t batteryCapacity = 5200;
 uint8_t legacyBatteryVoltage = 0;
 uint8_t batteryState = 0;       // voltage color 0==white, 1==red 
@@ -149,6 +149,11 @@ uint8_t set_home = 1;
 uint8_t blink_counter = 0;
 uint16_t blink_sats_orig_pos = osd_gps_sats_pos;
 uint16_t blink_sats_blank_pos = 234;
+int32_t textCounter = 0;
+uint32_t previousFlightMode = custom_mode;
+uint8_t print_pause = 0;
+uint32_t previousMillis_FLM = 0;
+uint32_t next_interval_FLM = 10000;
 
 void setup()
 {
@@ -165,27 +170,53 @@ void loop()
     mavl_receive();  
     
     //send MSP data
-    uint32_t currentMillisMSP = millis();
-    if ((uint32_t)(currentMillisMSP - previousMillisMSP) >= next_interval_MSP) {
-        previousMillisMSP = currentMillisMSP;
+    uint32_t currentMillis_MSP = millis();
+    if ((uint32_t)(currentMillis_MSP - previousMillis_MSP) >= next_interval_MSP) {
+        previousMillis_MSP = currentMillis_MSP;
         
         GPS_calculateDistanceAndDirectionToHome();
         
-        send_msp_to_goggles();
+        send_msp_to_airunit();
         
         f_mAhDrawn += ((float)amperage * 10.0 * (millis() - dt) / 3600000.0) * mAh_calib_factor;
         mAhDrawn = (uint16_t)f_mAhDrawn;
         dt = millis();
 
-        if(blink_counter > 8 && set_home == 1){
+        if(blink_counter > 8 && set_home == 1 && blink_sats_orig_pos > 2000){
             invert_pos(&osd_gps_sats_pos, &blink_sats_blank_pos);
             blink_counter = 0;
         }
         else if(set_home == 0){
             osd_gps_sats_pos = blink_sats_orig_pos;
         }
-        blink_counter++;        
+        blink_counter++;
+        
+        if(textCounter > 0)textCounter = textCounter - next_interval_MSP;
     }
+    
+    if(textCounter <= 0){
+        print_pause = 0;
+    }
+    
+    if(custom_mode != previousFlightMode){
+        previousFlightMode = custom_mode;
+        display_flight_mode(1000);
+    }
+
+    if(batteryCellCount == 0 && vbat > 0)set_battery_cells_number();
+
+    if((system_status == MAV_STATE_CRITICAL || system_status == MAV_STATE_EMERGENCY) && (blink_counter % 8 == 0)) 
+    {
+        char failsafe[15] = {'F','A','I','L','S','A','F','E'};
+        show_text(&failsafe, 500);
+    }
+
+    //display flight mode every 10s for 0.5s
+    uint32_t currentMillis_FLM = millis();
+    if ((uint32_t)(currentMillis_FLM - previousMillis_FLM) >= next_interval_FLM) {
+        previousMillis_FLM = currentMillis_FLM;
+        display_flight_mode(500);
+    }      
 
     //set GPS home when 3D fix
     if(fix_type > 2 && set_home == 1){
@@ -196,6 +227,29 @@ void loop()
       set_home = 0;
     }
     
+}
+
+void set_battery_cells_number()
+{
+    if(vbat < 43)batteryCellCount = 1;
+    else if(vbat < 85)batteryCellCount = 2;
+    else if(vbat < 127)batteryCellCount = 3;
+    else if(vbat < 169)batteryCellCount = 4;
+    else if(vbat < 211)batteryCellCount = 5;
+    else if(vbat < 255)batteryCellCount = 6;
+}
+
+void save_text(char (*text)[15])
+{
+    memcpy(craftname, *text, sizeof(craftname));
+}
+
+void show_text(char (*text)[15], uint32_t textTimeMS)
+{
+    print_pause = 1;
+    textCounter = textTimeMS;
+    
+    save_text(&(*text));
 }
 
 void mavl_receive() 
@@ -269,7 +323,8 @@ void mavl_receive()
 
             base_mode = heartbeat.base_mode;
             system_status = heartbeat.system_status;
-            
+            custom_mode = heartbeat.custom_mode;
+
             }
             break;            
             
@@ -291,9 +346,7 @@ void mavl_receive()
     }
 }
 
-String cnameStr = "";
-
-void send_msp_to_goggles()
+void send_msp_to_airunit()
 {
     msp_fc_version_t fc_version;
     msp_name_t name;
@@ -323,27 +376,29 @@ void send_msp_to_goggles()
     msp.send(MSP_FC_VERSION, &fc_version, sizeof(fc_version));
     
     //MSP_NAME
-    cnameStr = "";
-    strncpy(name.craft_name, craftname, sizeof(name.craft_name));
-    
 #ifdef USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED
-
+    String cnameStr = "";
+    
+if(print_pause == 0){
   #ifdef IMPERIAL_UNITS
-    cnameStr = cnameStr + "A" + ((uint16_t)(altitude_mav / 0.3048));
+    cnameStr = cnameStr + "A:" + ((uint16_t)(altitude_mav / 0.3048));
   #else  
-    cnameStr = cnameStr + "A" + altitude_mav;
+    cnameStr = cnameStr + "A:" + altitude_mav;
   #endif
 
   #ifdef SPEED_IN_KILOMETERS_PER_HOUR
-    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed * 3.6));
+    cnameStr = cnameStr + " S:" + ((uint16_t)(groundspeed * 3.6));
   #elif defined(SPEED_IN_MILES_PER_HOUR)
-    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed * 2.2369));
+    cnameStr = cnameStr + " S:" + ((uint16_t)(groundspeed * 2.2369));
   #else
-    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed));             //meters per second
+    cnameStr = cnameStr + " S:" + ((uint16_t)(groundspeed));             //meters per second
   #endif
   
-    cnameStr.toCharArray(name.craft_name, sizeof(name.craft_name));
-
+    cnameStr.toCharArray(name.craft_name, sizeof(craftname));
+} 
+else if(print_pause == 1){
+    memcpy(name.craft_name, craftname, sizeof(craftname)); 
+}
 #endif
 
     msp.send(MSP_NAME, &name, sizeof(name));
@@ -491,6 +546,342 @@ void invert_pos(uint16_t *pos1, uint16_t *pos2)
     *pos1 = *pos2;
     *pos2 = tmp_pos;
 }
+
+void display_flight_mode(uint32_t timeAmountMS)
+{
+    switch(custom_mode)
+    {
+#if VEHICLE_TYPE == 0
+        case MANUAL:
+        {
+            char t[15] = {'M','A','N','U','A','L'};
+            show_text(&t, timeAmountMS);
+        }
+        break;
+
+        case CIRCLE:
+        {
+            char t[15] = {'C','I','R','C','L','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case STABILIZE:
+        {
+            char t[15] = {'S','T','A','B','I','L','I','Z','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case TRAINING:
+        {
+            char t[15] = {'T','R','A','I','N','I','N','G'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case ACRO:
+        {
+            char t[15] = {'A','C','R','O'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case FLY_BY_WIRE_A:
+        {
+            char t[15] = {'F','L','Y',' ','B','Y',' ','W','I','R','E',' ','A'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case FLY_BY_WIRE_B:
+        {
+            char t[15] = {'F','L','Y',' ','B','Y',' ','W','I','R','E',' ','B'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case CRUISE:
+        {
+            char t[15] = {'C','R','U','I','S','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case AUTOTUNE:
+        {
+            char t[15] = {'A','U','T','O','T','U','N','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case AUTO:
+        {
+            char t[15] = {'A','U','T','O'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case RTL:
+        {
+            char t[15] = {'R','T','L'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case LOITER:
+        {
+            char t[15] = {'L','O','I','T','E','R'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case TAKEOFF:
+        {
+            char t[15] = {'T','A','K','E','O','F','F'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case AVOID_ADSB:
+        {
+            char t[15] = {'A','V','O','I','D','_','A','D','S','B'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case GUIDED:
+        {
+            char t[15] = {'G','U','I','D','E','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case INITIALISING:
+        {
+            char t[15] = {'I','N','I','T','I','A','L','I','S','I','N','G'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case QSTABILIZE:
+        {
+            char t[15] = {'Q','S','T','A','B','I','L','I','Z','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case QHOVER:
+        {
+            char t[15] = {'Q','H','O','V','E','R'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case QLOITER:
+        {
+            char t[15] = {'Q','L','O','I','T','E','R'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case QLAND:
+        {
+            char t[15] = {'Q','L','A','N','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case QRTL:
+        {
+            char t[15] = {'Q','R','T','L'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case QAUTOTUNE:
+        {
+            char t[15] = {'Q','A','U','T','O','T','U','N','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case QACRO:
+        {
+            char t[15] = {'Q','A','C','R','O'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+        
+#elif VEHICLE_TYPE == 1
+
+        case STABILIZE:
+        {
+            char t[15] = {'S','T','A','B','I','L','I','Z','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case ACRO:
+        {
+            char t[15] = {'A','C','R','O'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case ALT_HOLD:
+        {
+            char t[15] = {'A','L','T','_','H','O','L','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case AUTO:
+        {
+            char t[15] = {'A','U','T','O'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case GUIDED:
+        {
+            char t[15] = {'G','U','I','D','E','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case LOITER:
+        {
+            char t[15] = {'L','O','I','T','E','R'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case RTL:
+        {
+            char t[15] = {'R','T','L'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case CIRCLE:
+        {
+            char t[15] = {'C','I','R','C','L','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case LAND:
+        {
+            char t[15] = {'L','A','N','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case DRIFT:
+        {
+            char t[15] = {'D','R','I','F','T'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case SPORT:
+        {
+            char t[15] = {'S','P','O','R','T'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case FLIP:
+        {
+            char t[15] = {'F','L','I','P'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case AUTOTUNE:
+        {
+            char t[15] = {'A','U','T','O','T','U','N','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case POSHOLD:
+        {
+            char t[15] = {'P','O','S','H','O','L','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case BRAKE:
+        {
+            char t[15] = {'B','R','A','K','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case THROW:
+        {
+            char t[15] = {'T','H','R','O','W'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case AVOID_ADSB:
+        {
+            char t[15] = {'A','V','O','I','D','_','A','D','S','B'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case GUIDED_NOGPS:
+        {
+            char t[15] = {'G','U','I','D','E','D','_','N','O','G','P','S'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case SMART_RTL:
+        {
+            char t[15] = {'S','M','A','R','T','_','R','T','L'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case FLOWHOLD:
+        {
+            char t[15] = {'F','L','O','W','H','O','L','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case FOLLOW:
+        {
+            char t[15] = {'F','O','L','L','O','W'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case ZIGZAG:
+        {
+            char t[15] = {'Z','I','G','Z','A','G'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case SYSTEMID:
+        {
+            char t[15] = {'S','Y','S','T','E','M','I','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+#endif    
+        default:
+        break;
+    }
+}
+
 
 //from here on code from Betaflight github https://github.com/betaflight/betaflight/blob/c8b5edb415c33916c91a7ccc8bd19c7276540cd1/src/main/io/gps.c
 
