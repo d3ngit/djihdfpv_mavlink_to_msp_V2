@@ -54,6 +54,39 @@ typedef enum{
         ZIGZAG    =    24,  // ZIGZAG mode is able to fly in a zigzag manner with predefined point A and point B
         SYSTEMID  =    25,  // System ID mode produces automated system identification signals in the controllers
     }arduCopterModes_e;
+
+#elif VEHICLE_TYPE == 2 
+//INAV Plane
+typedef enum {
+        MANUAL = 0,
+        ACRO = 4,
+        ANGLE = 2,
+        //HORIZON = 2,
+        ALTITUDE_HOLD = 5,
+        POSITION_HOLD = 1,
+        RTH = 11,
+        MISSION = 10,
+        LAUNCH = 15,
+        //FAILSAFE = 2
+} inavPlaneModes_e;
+//inavToArduPlaneMap[10]  = { 0,  4,  2,  2,  5,  1, 11, 10, 15,  2 };
+
+#elif VEHICLE_TYPE == 3
+//INAV Copter
+typedef enum {
+        //MANUAL = 1,
+        ACRO = 1,
+        ANGLE = 0,
+        //HORIZON = 0,
+        ALTITUDE_HOLD = 2,
+        POSITION_HOLD = 16,
+        RTH = 6,
+        MISSION = 3,
+        LAUNCH = 18,
+        //FAILSAFE = 0
+} inavCopterModes_e;
+//inavToArduCopterMap[10] = { 1,  1,  0,  0,  2, 16,  6,  3, 18,  0 };
+
 #endif
 
 

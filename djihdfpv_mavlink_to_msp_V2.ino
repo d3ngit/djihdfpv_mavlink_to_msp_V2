@@ -14,7 +14,7 @@
 #define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the flight mode only.
 #define USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME             //comment out to disable
 //#define IMPERIAL_UNITS                                                    //Altitude in feet, distance to home in miles.
-#define VEHICLE_TYPE                                                0       //0==Plane, 1==Copter  used for flight modes
+#define VEHICLE_TYPE                                                0       //0==ArduPlane, 1==ArduCopter, 2==INAVPlane, 3==INAVCopter. Used for flight modes
 
 #include <checksum.h>
 #include <mavlink.h>
@@ -876,6 +876,65 @@ void display_flight_mode(uint32_t timeAmountMS)
         }
         break;
 
+#elif VEHICLE_TYPE == 2 || VEHICLE_TYPE == 3
+     #if  VEHICLE_TYPE == 2
+        case MANUAL:
+        {
+            char t[15] = {'M','A','N','U','A','L'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+     #endif
+ 
+        case ACRO:
+        {
+            char t[15] = {'A','C','R','O'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case ANGLE:
+        {
+            char t[15] = {'A','N','G','L','E'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case ALTITUDE_HOLD:
+        {
+            char t[15] = {'A','L','T','I','T','U','D','E',' ','H','O','L','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case POSITION_HOLD:
+        {
+            char t[15] = {'P','O','S','I','T','I','O','N',' ','H','O','L','D'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case RTH:
+        {
+            char t[15] = {'R','T','H'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case MISSION:
+        {
+            char t[15] = {'M','I','S','S','I','O','N'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+
+        case LAUNCH:
+        {
+            char t[15] = {'L','A','U','N','C','H'};
+            show_text(&t, timeAmountMS);    
+        }
+        break;
+        
 #endif    
         default:
         break;
