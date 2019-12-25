@@ -26,9 +26,9 @@
 #include "flt_modes.h"
 
 #if SERIAL_TYPE == 0
-  #include <SoftwareSerial.h>
+  #include <AltSoftSerial.h>
   HardwareSerial &mspSerial = Serial;
-  SoftwareSerial mavlinkSerial(8, 9); // RX, TX
+  AltSoftSerial mavlinkSerial(8, 9); // RX, TX
 #elif SERIAL_TYPE == 1
   HardwareSerial &mspSerial = Serial2;
   HardwareSerial &mavlinkSerial = Serial3;
