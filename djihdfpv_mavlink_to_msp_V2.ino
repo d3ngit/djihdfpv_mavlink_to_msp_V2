@@ -8,7 +8,7 @@
 */
 
 #define SERIAL_TYPE                                                 0       //0==SoftSerial(Arduino_Nano), 1==HardSerial(others)
-#define MAH_CALIBRATION_FACTOR                                      1.166f  //used to calibrate mAh reading. Matek F405wing ~1.166
+#define MAH_CALIBRATION_FACTOR                                      1.0f    //used to calibrate mAh reading.
 #define SPEED_IN_KILOMETERS_PER_HOUR                                        //if commented out defaults to m/s
 //#define SPEED_IN_MILES_PER_HOUR
 #define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the flight mode only.
@@ -28,7 +28,7 @@
 #if SERIAL_TYPE == 0
   #include <AltSoftSerial.h>
   HardwareSerial &mspSerial = Serial;
-  AltSoftSerial mavlinkSerial(8, 9); // RX, TX
+  AltSoftSerial mavlinkSerial;              // RX pin 8, TX pin 9
 #elif SERIAL_TYPE == 1
   HardwareSerial &mspSerial = Serial2;
   HardwareSerial &mavlinkSerial = Serial3;
@@ -39,66 +39,66 @@ MSP msp;
 //OSD item locations
 //in betaflight configurator set OSD items to your desired positions and in CLI type "set osd" to retreieve the numbers.
 //234 -> not visible.  (0 - 15359) . horizontally 2048-2074(spacing 1), vertically 2048-2528(spacing 32). 26 characters X 15 lines
-uint16_t osd_rssi_value_pos = 2179;
-uint16_t osd_main_batt_voltage_pos = 234;
-uint16_t osd_crosshairs_pos = 234;
-uint16_t osd_artificial_horizon_pos = 234;
-uint16_t osd_horizon_sidebars_pos = 234;
-uint16_t osd_item_timer_1_pos = 234;
-uint16_t osd_item_timer_2_pos = 234;
-uint16_t osd_flymode_pos = 234;
-uint16_t osd_craft_name_pos = 2543;
-uint16_t osd_throttle_pos_pos = 234;
-uint16_t osd_vtx_channel_pos = 234;
-uint16_t osd_current_draw_pos = 2102;
-uint16_t osd_mah_drawn_pos = 2136;
-uint16_t osd_gps_speed_pos = 234;
+const uint16_t osd_rssi_value_pos = 2179;
+const uint16_t osd_main_batt_voltage_pos = 234;
+const uint16_t osd_crosshairs_pos = 234;
+const uint16_t osd_artificial_horizon_pos = 234;
+const uint16_t osd_horizon_sidebars_pos = 234;
+const uint16_t osd_item_timer_1_pos = 234;
+const uint16_t osd_item_timer_2_pos = 234;
+const uint16_t osd_flymode_pos = 234;
+const uint16_t osd_craft_name_pos = 2543;
+const uint16_t osd_throttle_pos_pos = 234;
+const uint16_t osd_vtx_channel_pos = 234;
+const uint16_t osd_current_draw_pos = 2102;
+const uint16_t osd_mah_drawn_pos = 2136;
+const uint16_t osd_gps_speed_pos = 234;
 uint16_t osd_gps_sats_pos = 2465;
-uint16_t osd_altitude_pos = 234;
-uint16_t osd_roll_pids_pos = 234;
-uint16_t osd_pitch_pids_pos = 234;
-uint16_t osd_yaw_pids_pos = 234;
-uint16_t osd_power_pos = 234;
-uint16_t osd_pidrate_profile_pos = 234;
-uint16_t osd_warnings_pos = 234;
-uint16_t osd_avg_cell_voltage_pos = 2072;
-uint16_t osd_gps_lon_pos = 2113;
-uint16_t osd_gps_lat_pos = 2081;
-uint16_t osd_debug_pos = 234;
-uint16_t osd_pitch_angle_pos = 2488;
-uint16_t osd_roll_angle_pos = 2456;
-uint16_t osd_main_batt_usage_pos = 234;
-uint16_t osd_disarmed_pos = 234;
-uint16_t osd_home_dir_pos = 234;
-uint16_t osd_home_dist_pos = 234;
-uint16_t osd_numerical_heading_pos = 234;
-uint16_t osd_numerical_vario_pos = 234;
-uint16_t osd_compass_bar_pos = 234;
-uint16_t osd_esc_tmp_pos = 234;
-uint16_t osd_esc_rpm_pos = 234;
-uint16_t osd_remaining_time_estimate_pos = 234;
-uint16_t osd_rtc_datetime_pos = 234;
-uint16_t osd_adjustment_range_pos = 234;
-uint16_t osd_core_temperature_pos = 234;
-uint16_t osd_anti_gravity_pos = 234;
-uint16_t osd_g_force_pos = 234;
-uint16_t osd_motor_diag_pos = 234;
-uint16_t osd_log_status_pos = 234;
-uint16_t osd_flip_arrow_pos = 234;
-uint16_t osd_link_quality_pos = 234;
-uint16_t osd_flight_dist_pos = 234;
-uint16_t osd_stick_overlay_left_pos = 234;
-uint16_t osd_stick_overlay_right_pos = 234;
-uint16_t osd_display_name_pos = 234;
-uint16_t osd_esc_rpm_freq_pos = 234;
-uint16_t osd_rate_profile_name_pos = 234;
-uint16_t osd_pid_profile_name_pos = 234;
-uint16_t osd_profile_name_pos = 234;
-uint16_t osd_rssi_dbm_value_pos = 234;
-uint16_t osd_rc_channels_pos = 234;
+const uint16_t osd_altitude_pos = 234;
+const uint16_t osd_roll_pids_pos = 234;
+const uint16_t osd_pitch_pids_pos = 234;
+const uint16_t osd_yaw_pids_pos = 234;
+const uint16_t osd_power_pos = 234;
+const uint16_t osd_pidrate_profile_pos = 234;
+const uint16_t osd_warnings_pos = 234;
+const uint16_t osd_avg_cell_voltage_pos = 2072;
+const uint16_t osd_gps_lon_pos = 2113;
+const uint16_t osd_gps_lat_pos = 2081;
+const uint16_t osd_debug_pos = 234;
+const uint16_t osd_pitch_angle_pos = 2488;
+const uint16_t osd_roll_angle_pos = 2456;
+const uint16_t osd_main_batt_usage_pos = 234;
+const uint16_t osd_disarmed_pos = 234;
+const uint16_t osd_home_dir_pos = 234;
+const uint16_t osd_home_dist_pos = 234;
+const uint16_t osd_numerical_heading_pos = 234;
+const uint16_t osd_numerical_vario_pos = 234;
+const uint16_t osd_compass_bar_pos = 234;
+const uint16_t osd_esc_tmp_pos = 234;
+const uint16_t osd_esc_rpm_pos = 234;
+const uint16_t osd_remaining_time_estimate_pos = 234;
+const uint16_t osd_rtc_datetime_pos = 234;
+const uint16_t osd_adjustment_range_pos = 234;
+const uint16_t osd_core_temperature_pos = 234;
+const uint16_t osd_anti_gravity_pos = 234;
+const uint16_t osd_g_force_pos = 234;
+const uint16_t osd_motor_diag_pos = 234;
+const uint16_t osd_log_status_pos = 234;
+const uint16_t osd_flip_arrow_pos = 234;
+const uint16_t osd_link_quality_pos = 234;
+const uint16_t osd_flight_dist_pos = 234;
+const uint16_t osd_stick_overlay_left_pos = 234;
+const uint16_t osd_stick_overlay_right_pos = 234;
+const uint16_t osd_display_name_pos = 234;
+const uint16_t osd_esc_rpm_freq_pos = 234;
+const uint16_t osd_rate_profile_name_pos = 234;
+const uint16_t osd_pid_profile_name_pos = 234;
+const uint16_t osd_profile_name_pos = 234;
+const uint16_t osd_rssi_dbm_value_pos = 234;
+const uint16_t osd_rc_channels_pos = 234;
 
 uint32_t previousMillis_MSP = 0;
-uint32_t next_interval_MSP = 100;
+const uint32_t next_interval_MSP = 100;
 
 uint8_t base_mode = MAV_MODE_PREFLIGHT;
 uint8_t system_status = MAV_STATE_UNINIT;
@@ -107,7 +107,7 @@ uint32_t custom_mode = 0;                       //flight mode
 uint8_t vbat = 0;
 float airspeed = 0;
 float groundspeed = 0;
-uint16_t altitude_mav = 0;      // in meters
+int32_t relative_alt = 0;       // in milimeters
 uint32_t altitude_msp = 0;      // EstimatedAltitudeCm
 uint16_t rssi = 0;
 uint8_t battery_remaining = 0;
@@ -153,7 +153,7 @@ int32_t textCounter = 0;
 uint32_t previousFlightMode = custom_mode;
 uint8_t print_pause = 0;
 uint32_t previousMillis_FLM = 0;
-uint32_t next_interval_FLM = 10000;
+const uint32_t next_interval_FLM = 10000;
 
 void setup()
 {
@@ -175,6 +175,7 @@ void loop()
         previousMillis_MSP = currentMillis_MSP;
         
         GPS_calculateDistanceAndDirectionToHome();
+        set_flight_mode_flags();
         
         send_msp_to_airunit();
         
@@ -191,7 +192,7 @@ void loop()
         }
         blink_counter++;
         
-        if(textCounter > 0)textCounter = textCounter - next_interval_MSP;
+        if(textCounter > 0)textCounter -= next_interval_MSP;
     }
     
     if(textCounter <= 0){
@@ -219,7 +220,7 @@ void loop()
     }      
 
     //set GPS home when 3D fix
-    if(fix_type > 2 && set_home == 1){
+    if(fix_type > 2 && set_home == 1 && gps_lat > 0 && gps_lon > 0 && numSat > 5){
       gps_home_lat = gps_lat;
       gps_home_lon = gps_lon;
       gps_home_alt = gps_alt;
@@ -227,6 +228,34 @@ void loop()
       set_home = 0;
     }
     
+}
+
+void set_flight_mode_flags()
+{
+    if(base_mode & MAV_MODE_FLAG_SAFETY_ARMED){
+        flightModeFlags |= ARM_ACRO_BF;
+    }
+    else{
+        flightModeFlags &= ~ARM_ACRO_BF;
+    } 
+    if(custom_mode == STABILIZE){
+        flightModeFlags |= STAB_BF;
+    } 
+    else{
+        flightModeFlags &= ~STAB_BF;
+    }
+    if((system_status == MAV_STATE_CRITICAL || system_status == MAV_STATE_EMERGENCY)){
+        flightModeFlags |= FS_BF;
+    } 
+    else{
+        flightModeFlags &= ~FS_BF;
+    }
+    if(custom_mode == RTL){
+        flightModeFlags |= RESC_BF;
+    }
+    else{
+        flightModeFlags &= ~RESC_BF;
+    }
 }
 
 void set_battery_cells_number()
@@ -297,7 +326,7 @@ void mavl_receive()
             mavlink_msg_global_position_int_decode(&msg, &global_position_int);
             
             heading = global_position_int.hdg;
-            altitude_mav = (uint16_t)(global_position_int.relative_alt / 1000); //int32_t in milimeters -> converted to meters
+            relative_alt = global_position_int.relative_alt;
             gps_lat = global_position_int.lat;
             gps_lon = global_position_int.lon;
             gps_alt = global_position_int.alt;
@@ -359,15 +388,6 @@ void send_msp_to_airunit()
     msp_attitude_t attitude;
     msp_altitude_t altitude;
    
-                
-    if(base_mode & MAV_MODE_FLAG_SAFETY_ARMED){
-        status.flightModeFlags = 1;
-        status_ex.flightModeFlags = 1;
-    } 
-    else{
-        status.flightModeFlags = 0;
-        status_ex.flightModeFlags = 0;
-    }
     
     //MSP_FC_VERSION
     fc_version.versionMajor = 4;
@@ -381,9 +401,9 @@ void send_msp_to_airunit()
     
 if(print_pause == 0){
   #ifdef IMPERIAL_UNITS
-    cnameStr = cnameStr + "A:" + ((uint16_t)(altitude_mav / 0.3048));
+    cnameStr = cnameStr + "A:" + ((int16_t)(relative_alt  / 1000 / 0.3048)); 
   #else  
-    cnameStr = cnameStr + "A:" + altitude_mav;
+    cnameStr = cnameStr + "A:" + (relative_alt  / 1000);                 //int32_t in milimeters -> converted to meters
   #endif
 
   #ifdef SPEED_IN_KILOMETERS_PER_HOUR
@@ -404,6 +424,7 @@ else if(print_pause == 1){
     msp.send(MSP_NAME, &name, sizeof(name));
     
     //MSP_STATUS
+    status.flightModeFlags = flightModeFlags;
     msp.send(MSP_STATUS, &status, sizeof(status));
     
     //MSP_ANALOG
@@ -424,8 +445,9 @@ else if(print_pause == 1){
     msp.send(MSP_BATTERY_STATE, &battery_state, sizeof(battery_state));
     
     //MSP_STATUS_EX
+    status_ex.flightModeFlags = flightModeFlags;
     msp.send(MSP_STATUS_EX, &status_ex, sizeof(status_ex));
-    
+        
     //MSP_RAW_GPS
     raw_gps.lat = gps_lat;
     raw_gps.lon = gps_lon;
