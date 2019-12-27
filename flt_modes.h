@@ -71,6 +71,11 @@ typedef enum {
 } inavPlaneModes_e;
 //inavToArduPlaneMap[10]  = { 0,  4,  2,  2,  5,  1, 11, 10, 15,  2 };
 
+typedef enum{
+        STABILIZE       = 2,
+        RTL             = 11
+       }arduPlaneModes_e;
+       
 #elif VEHICLE_TYPE == 3
 //INAV Copter
 typedef enum {
@@ -87,6 +92,10 @@ typedef enum {
 } inavCopterModes_e;
 //inavToArduCopterMap[10] = { 1,  1,  0,  0,  2, 16,  6,  3, 18,  0 };
 
+typedef enum{
+        STABILIZE       = 0,  // manual airframe angle with manual throttle
+        RTL             = 6  // automatic return to launching point
+}arduCopterModes_e;
 #endif
 
 typedef enum {
