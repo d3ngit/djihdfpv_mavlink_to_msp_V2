@@ -220,7 +220,7 @@ void loop()
     }      
 
     //set GPS home when 3D fix
-    if(fix_type > 2 && set_home == 1 && gps_lat > 0 && gps_lon > 0 && numSat > 5){
+    if(fix_type > 2 && set_home == 1 && gps_lat != 0 && gps_lon != 0 && numSat > 5){
       gps_home_lat = gps_lat;
       gps_home_lon = gps_lon;
       gps_home_alt = gps_alt;
