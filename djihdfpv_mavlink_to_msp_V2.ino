@@ -24,6 +24,7 @@
 #include <MSP.h>
 #include "MSP_OSD.h"
 #include "flt_modes.h"
+#include "OSD_positions_config.h"
 
 #if SERIAL_TYPE == 0
   #include <AltSoftSerial.h>
@@ -35,67 +36,6 @@
 #endif
 
 MSP msp;
-
-//OSD item locations
-//in betaflight configurator set OSD items to your desired positions and in CLI type "set osd" to retreieve the numbers.
-//234 -> not visible.  (0 - 15359) . horizontally 2048-2074(spacing 1), vertically 2048-2528(spacing 32). 26 characters X 15 lines
-const uint16_t osd_rssi_value_pos = 2179;
-const uint16_t osd_main_batt_voltage_pos = 234;
-const uint16_t osd_crosshairs_pos = 234;
-const uint16_t osd_artificial_horizon_pos = 234;
-const uint16_t osd_horizon_sidebars_pos = 234;
-const uint16_t osd_item_timer_1_pos = 234;
-const uint16_t osd_item_timer_2_pos = 234;
-const uint16_t osd_flymode_pos = 234;
-const uint16_t osd_craft_name_pos = 2543;
-const uint16_t osd_throttle_pos_pos = 234;
-const uint16_t osd_vtx_channel_pos = 234;
-const uint16_t osd_current_draw_pos = 2102;
-const uint16_t osd_mah_drawn_pos = 2136;
-const uint16_t osd_gps_speed_pos = 234;
-uint16_t osd_gps_sats_pos = 2465;
-const uint16_t osd_altitude_pos = 234;
-const uint16_t osd_roll_pids_pos = 234;
-const uint16_t osd_pitch_pids_pos = 234;
-const uint16_t osd_yaw_pids_pos = 234;
-const uint16_t osd_power_pos = 234;
-const uint16_t osd_pidrate_profile_pos = 234;
-const uint16_t osd_warnings_pos = 234;
-const uint16_t osd_avg_cell_voltage_pos = 2072;
-const uint16_t osd_gps_lon_pos = 2113;
-const uint16_t osd_gps_lat_pos = 2081;
-const uint16_t osd_debug_pos = 234;
-const uint16_t osd_pitch_angle_pos = 2488;
-const uint16_t osd_roll_angle_pos = 2456;
-const uint16_t osd_main_batt_usage_pos = 234;
-const uint16_t osd_disarmed_pos = 234;
-const uint16_t osd_home_dir_pos = 234;
-const uint16_t osd_home_dist_pos = 234;
-const uint16_t osd_numerical_heading_pos = 234;
-const uint16_t osd_numerical_vario_pos = 234;
-const uint16_t osd_compass_bar_pos = 234;
-const uint16_t osd_esc_tmp_pos = 234;
-const uint16_t osd_esc_rpm_pos = 234;
-const uint16_t osd_remaining_time_estimate_pos = 234;
-const uint16_t osd_rtc_datetime_pos = 234;
-const uint16_t osd_adjustment_range_pos = 234;
-const uint16_t osd_core_temperature_pos = 234;
-const uint16_t osd_anti_gravity_pos = 234;
-const uint16_t osd_g_force_pos = 234;
-const uint16_t osd_motor_diag_pos = 234;
-const uint16_t osd_log_status_pos = 234;
-const uint16_t osd_flip_arrow_pos = 234;
-const uint16_t osd_link_quality_pos = 234;
-const uint16_t osd_flight_dist_pos = 234;
-const uint16_t osd_stick_overlay_left_pos = 234;
-const uint16_t osd_stick_overlay_right_pos = 234;
-const uint16_t osd_display_name_pos = 234;
-const uint16_t osd_esc_rpm_freq_pos = 234;
-const uint16_t osd_rate_profile_name_pos = 234;
-const uint16_t osd_pid_profile_name_pos = 234;
-const uint16_t osd_profile_name_pos = 234;
-const uint16_t osd_rssi_dbm_value_pos = 234;
-const uint16_t osd_rc_channels_pos = 234;
 
 uint32_t previousMillis_MSP = 0;
 const uint32_t next_interval_MSP = 100;
@@ -128,9 +68,9 @@ int32_t gps_home_lat = 0;
 int32_t gps_home_alt = 0;
 int16_t roll_angle = 0;
 int16_t pitch_angle = 0;
-uint8_t escTemperature = 0;     // degrees celsius
-uint8_t rtc_date_time[9] = {20, 20, 01, 01, 00, 00, 00, 00, 00}; //YMDHMSM
-int16_t distanceToHome = 0;    // distance to home in meters
+//uint8_t escTemperature = 0;     // degrees celsius
+//uint8_t rtc_date_time[9] = {20, 20, 01, 01, 00, 00, 00, 00, 00}; //YMDHMSM
+uint32_t distanceToHome = 0;    // distance to home in meters
 int16_t directionToHome = 0;   // direction to home in degrees
 uint8_t fix_type = 0;           // < 0-1: no fix, 2: 2D fix, 3: 3D fix
 uint8_t batteryCellCount = 0;
@@ -138,7 +78,7 @@ uint16_t batteryCapacity = 5200;
 uint8_t legacyBatteryVoltage = 0;
 uint8_t batteryState = 0;       // voltage color 0==white, 1==red 
 uint16_t batteryVoltage = 0;
-uint16_t heading = 0;
+int16_t heading = 0;
 float dt = 0;
 #ifdef MAH_CALIBRATION_FACTOR
 float mAh_calib_factor = MAH_CALIBRATION_FACTOR;
@@ -316,6 +256,7 @@ void mavl_receive()
 
             airspeed = vfr_hud.airspeed; //float
             groundspeed = vfr_hud.groundspeed; //float
+            heading = vfr_hud.heading;
             
             }
             break;
@@ -325,7 +266,6 @@ void mavl_receive()
             mavlink_global_position_int_t global_position_int;
             mavlink_msg_global_position_int_decode(&msg, &global_position_int);
             
-            heading = global_position_int.hdg;
             relative_alt = global_position_int.relative_alt;
             gps_lat = global_position_int.lat;
             gps_lon = global_position_int.lon;
@@ -457,24 +397,24 @@ else if(print_pause == 1){
     msp.send(MSP_RAW_GPS, &raw_gps, sizeof(raw_gps));
     
     //MSP_COMP_GPS
-    comp_gps.distanceToHome = distanceToHome;
+    comp_gps.distanceToHome = (int16_t)distanceToHome;
     comp_gps.directionToHome = directionToHome;
     msp.send(MSP_COMP_GPS, &comp_gps, sizeof(comp_gps));
     
     //MSP_ATTITUDE
 #ifdef USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME
     #ifdef IMPERIAL_UNITS
-        distanceToHome = (uint16_t)((distanceToHome * 0.000621371192) * 10);  //meters to miles
-        attitude.pitch = distanceToHome;
+        distanceToHome = (uint32_t)((distanceToHome * 0.000621371192) * 10);  //meters to miles
+        attitude.pitch = (int16_t)distanceToHome;
     #else
         if(distanceToHome > 1000){
-            attitude.pitch = distanceToHome / 100; // switch from m to km when over 1000
+            attitude.pitch = (int16_t)(distanceToHome / 100); // switch from m to km when over 1000
         }
         else{
-            attitude.pitch = distanceToHome * 10;
+            attitude.pitch = (int16_t)(distanceToHome * 10);
         }
     #endif
-    attitude.roll = (directionToHome - (heading / 100)) * 10;
+    attitude.roll = (directionToHome - heading) * 10;
 #else
     attitude.pitch = pitch_angle;
     attitude.roll = roll_angle;
