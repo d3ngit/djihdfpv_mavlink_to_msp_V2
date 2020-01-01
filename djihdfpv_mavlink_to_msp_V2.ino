@@ -11,10 +11,11 @@
 #define MAH_CALIBRATION_FACTOR                                      1.0f    //used to calibrate mAh reading.
 #define SPEED_IN_KILOMETERS_PER_HOUR                                        //if commented out defaults to m/s
 //#define SPEED_IN_MILES_PER_HOUR
-#define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the flight mode only.
+#define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the current flight mode.
 #define USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME             //comment out to disable
 //#define IMPERIAL_UNITS                                                    //Altitude in feet, distance to home in miles.
 #define VEHICLE_TYPE                                                0       //0==ArduPlane, 1==ArduCopter, 2==INAVPlane, 3==INAVCopter. Used for flight modes
+#define STORE_GPS_LOCATION_IN_SUBTITLE_FILE                                 //comment out to disable. Stores GPS location in the goggles .srt file in place of the "uavBat:" field at a slow rate of ~2-3s per GPS coordinate
 
 #include <checksum.h>
 #include <mavlink.h>
@@ -86,7 +87,7 @@ float mAh_calib_factor = MAH_CALIBRATION_FACTOR;
 float mAh_calib_factor = 1;
 #endif
 uint8_t set_home = 1;
-uint8_t blink_counter = 0;
+uint32_t general_counter = 0;
 uint16_t blink_sats_orig_pos = osd_gps_sats_pos;
 uint16_t blink_sats_blank_pos = 234;
 int32_t textCounter = 0;
@@ -94,6 +95,7 @@ uint32_t previousFlightMode = custom_mode;
 uint8_t print_pause = 0;
 uint32_t previousMillis_FLM = 0;
 const uint32_t next_interval_FLM = 10000;
+uint8_t srtCounter = 1;                       
 
 void setup()
 {
@@ -123,15 +125,13 @@ void loop()
         mAhDrawn = (uint16_t)f_mAhDrawn;
         dt = millis();
 
-        if(blink_counter > 8 && set_home == 1 && blink_sats_orig_pos > 2000){
+        if(general_counter % 900 == 0 && set_home == 1 && blink_sats_orig_pos > 2000){
             invert_pos(&osd_gps_sats_pos, &blink_sats_blank_pos);
-            blink_counter = 0;
         }
         else if(set_home == 0){
             osd_gps_sats_pos = blink_sats_orig_pos;
         }
-        blink_counter++;
-        
+        general_counter += next_interval_MSP;        
         if(textCounter > 0)textCounter -= next_interval_MSP;
     }
     
@@ -146,7 +146,7 @@ void loop()
 
     if(batteryCellCount == 0 && vbat > 0)set_battery_cells_number();
 
-    if((system_status == MAV_STATE_CRITICAL || system_status == MAV_STATE_EMERGENCY) && (blink_counter % 8 == 0)) 
+    if((system_status == MAV_STATE_CRITICAL || system_status == MAV_STATE_EMERGENCY) && (general_counter % 800 == 0)) 
     {
         char failsafe[15] = {'F','A','I','L','S','A','F','E'};
         show_text(&failsafe, 500);
@@ -315,20 +315,19 @@ void mavl_receive()
     }
 }
 
+msp_battery_state_t battery_state = {0};
+msp_name_t name = {0};
+
 void send_msp_to_airunit()
 {
-    msp_fc_version_t fc_version;
-    msp_name_t name;
-    msp_status_t status;
-    msp_analog_t analog;
-    msp_battery_state_t battery_state;
-    msp_status_ex_t status_ex;
-    msp_raw_gps_t raw_gps;
-    msp_comp_gps_t comp_gps;
-    msp_attitude_t attitude;
-    msp_altitude_t altitude;
-   
-    
+    msp_fc_version_t fc_version = {0};
+    msp_status_BF_t status_BF = {0};
+    msp_analog_t analog = {0};
+    msp_raw_gps_t raw_gps = {0};
+    msp_comp_gps_t comp_gps = {0};
+    msp_attitude_t attitude = {0};
+    msp_altitude_t altitude = {0};
+
     //MSP_FC_VERSION
     fc_version.versionMajor = 4;
     fc_version.versionMinor = 1;
@@ -359,13 +358,15 @@ if(print_pause == 0){
 else if(print_pause == 1){
     memcpy(name.craft_name, craftname, sizeof(craftname)); 
 }
+#else
+    memcpy(name.craft_name, craftname, sizeof(craftname)); 
 #endif
 
     msp.send(MSP_NAME, &name, sizeof(name));
     
     //MSP_STATUS
-    status.flightModeFlags = flightModeFlags;
-    msp.send(MSP_STATUS, &status, sizeof(status));
+    status_BF.flightModeFlags = flightModeFlags;
+    msp.send(MSP_STATUS, &status_BF, sizeof(status_BF));
     
     //MSP_ANALOG
     analog.vbat = vbat;
@@ -380,14 +381,25 @@ else if(print_pause == 1){
     battery_state.mAhDrawn = mAhDrawn;
     battery_state.batteryCellCount = batteryCellCount;
     battery_state.batteryCapacity = batteryCapacity;
-    battery_state.legacyBatteryVoltage = (vbat + 5) / 10;
     battery_state.batteryState = batteryState;
+#ifdef STORE_GPS_LOCATION_IN_SUBTITLE_FILE
+    if(general_counter % 400 == 0 && srtCounter != 0){
+        String str = "";
+        str = str + (abs(gps_lat)/10) + "" + (abs(gps_lon)/10);
+        char m[] = {str[srtCounter-1], str[srtCounter]};
+        battery_state.legacyBatteryVoltage = atoi(m);
+        if(srtCounter <= 14)srtCounter += 2;
+          else srtCounter = 0;
+    }   
+    else if(general_counter % 400 == 0 && srtCounter < 1){
+        battery_state.legacyBatteryVoltage = 255;
+        srtCounter = 1;
+    }
+#else    
+    battery_state.legacyBatteryVoltage = vbat;
+#endif    
     msp.send(MSP_BATTERY_STATE, &battery_state, sizeof(battery_state));
     
-    //MSP_STATUS_EX
-    status_ex.flightModeFlags = flightModeFlags;
-    msp.send(MSP_STATUS_EX, &status_ex, sizeof(status_ex));
-        
     //MSP_RAW_GPS
     raw_gps.lat = gps_lat;
     raw_gps.lon = gps_lon;
@@ -431,7 +443,7 @@ else if(print_pause == 1){
 
 void send_osd_config()
 {
-    msp_osd_config_t msp_osd_config;    
+    msp_osd_config_t msp_osd_config = {0};
     
     msp_osd_config.osd_item_count = 56;
     msp_osd_config.osd_stat_count = 24;
