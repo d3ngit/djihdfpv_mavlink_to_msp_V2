@@ -117,6 +117,20 @@ struct msp_battery_state_t {
     uint8_t batteryState;
     uint16_t batteryVoltage;
 } __attribute__ ((packed));
- 
 
+// MSP_STATUS reply customized for BF/DJI
+struct msp_status_BF_t {
+  uint16_t cycleTime;
+  uint16_t i2cErrorCounter;
+  uint16_t sensor;                    // MSP_STATUS_SENSOR_...
+  uint32_t flightModeFlags;           // see getActiveModes()
+  uint8_t  configProfileIndex;
+  uint16_t averageSystemLoadPercent;  // 0...100
+  uint16_t gyroCyleTime;
+  uint8_t bytecount;    //0
+  //uint8_t flagsData;  //nothing because bytecount == 0
+  uint8_t armingDisableFlagsCount;
+  uint32_t armingDisableFlags;
+  uint8_t  rebootRequired;
+} __attribute__ ((packed));
 
