@@ -1,7 +1,6 @@
-
 #if VEHICLE_TYPE == 0
 //ArduPlane
-typedef enum{
+const typedef enum{
         MANUAL        = 0,
         CIRCLE        = 1,
         STABILIZE     = 2,
@@ -27,9 +26,34 @@ typedef enum{
         QACRO         = 23,
     }arduPlaneModes_e;
 
+const char arduPlaneModeStr[24][15] PROGMEM =  {"MANUAL",
+                                                "CIRCLE",
+                                                "STABILIZE",
+                                                "TRAINING",
+                                                "ACRO",
+                                                "FLY BY WIRE A",
+                                                "FLY BY WIRE B",
+                                                "CRUISE",
+                                                "AUTOTUNE",
+                                                "",
+                                                "AUTO",
+                                                "RTL",
+                                                "LOITER",
+                                                "TAKEOFF",
+                                                "AVOID_ADSB",
+                                                "GUIDED",
+                                                "INITIALISING",
+                                                "QSTABILIZE",
+                                                "QHOVER",
+                                                "QLOITER",
+                                                "QLAND",
+                                                "QRTL",
+                                                "QAUTOTUNE",
+                                                "QACRO"};
+
 #elif VEHICLE_TYPE == 1
 //ArduCopter
-typedef enum{
+const typedef enum{
         STABILIZE =     0,  // manual airframe angle with manual throttle
         ACRO =          1,  // manual body-frame angular rate with manual throttle
         ALT_HOLD =      2,  // manual airframe angle with automatic throttle
@@ -55,50 +79,101 @@ typedef enum{
         SYSTEMID  =    25,  // System ID mode produces automated system identification signals in the controllers
     }arduCopterModes_e;
 
-#elif VEHICLE_TYPE == 2 
-//INAV Plane
-typedef enum {
-        MANUAL          = 0,
-        ACRO            = 4,
-        ANGLE           = 2,
-        //HORIZON       = 2,
-        ALTITUDE_HOLD   = 5,
-        POSITION_HOLD   = 1,
-        RTH             = 11,
-        MISSION         = 10,
-        LAUNCH          = 15,
-        //FAILSAFE      = 2
-} inavPlaneModes_e;
-//inavToArduPlaneMap[10]  = { 0,  4,  2,  2,  5,  1, 11, 10, 15,  2 };
+const char arduCopterModeStr[26][15] PROGMEM = {"STABILIZE",
+                                                "ACRO",
+                                                "ALT_HOLD",
+                                                "AUTO",
+                                                "GUIDED",
+                                                "LOITER",
+                                                "RTL",
+                                                "CIRCLE",
+                                                "",
+                                                "LAND",
+                                                "",
+                                                "DRIFT",
+                                                "",
+                                                "SPORT",
+                                                "FLIP",
+                                                "AUTOTUNE",
+                                                "POSHOLD",
+                                                "BRAKE",
+                                                "THROW",
+                                                "AVOID_ADSB",
+                                                "GUIDED_NOGPS",
+                                                "SMART_RTL",
+                                                "FLOWHOLD",
+                                                "FOLLOW",
+                                                "ZIGZAG",
+                                                "SYSTEMID"};
 
-typedef enum{
+
+#elif VEHICLE_TYPE == 2
+//INAV Plane
+const char inavPlaneModeStr[24][15] PROGMEM =    {"MANUAL",
+                                                  "POSITION_HOLD",
+                                                  "ANGLE",
+                                                  "",
+                                                  "ACRO",
+                                                  "ALTITUDE_HOLD",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "MISSION",
+                                                  "RTH",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "LAUNCH",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  ""};
+
+const typedef enum{
         STABILIZE       = 2,
         RTL             = 11
-       }arduPlaneModes_e;
-       
+}arduPlaneModes_e;
+
 #elif VEHICLE_TYPE == 3
 //INAV Copter
-typedef enum {
-        //MANUAL        = 1,
-        ACRO            = 1,
-        ANGLE           = 0,
-        //HORIZON       = 0,
-        ALTITUDE_HOLD   = 2,
-        POSITION_HOLD   = 16,
-        RTH             = 6,
-        MISSION         = 3,
-        LAUNCH          = 18,
-        //FAILSAFE      = 0
-} inavCopterModes_e;
-//inavToArduCopterMap[10] = { 1,  1,  0,  0,  2, 16,  6,  3, 18,  0 };
+const char inavCopterModeStr[26][15] PROGMEM =   {"ANGLE",
+                                                  "ACRO",
+                                                  "ALTITUDE_HOLD",
+                                                  "MISSION",
+                                                  "",
+                                                  "",
+                                                  "RTH",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "POSITION_HOLD",
+                                                  "",
+                                                  "LAUNCH",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  "",
+                                                  ""};
 
-typedef enum{
+const typedef enum{
         STABILIZE       = 0,  // manual airframe angle with manual throttle
-        RTL             = 6  // automatic return to launching point
+        RTL             = 6   // automatic return to launching point
 }arduCopterModes_e;
 #endif
 
-typedef enum {
+const typedef enum {
         ARM_ACRO_BF = (1 << 0),
         STAB_BF     = (1 << 1),
         HOR_BF      = (1 << 2),
