@@ -16,6 +16,7 @@
 //#define IMPERIAL_UNITS                                                    //Altitude in feet, distance to home in miles.
 #define VEHICLE_TYPE                                                0       //0==ArduPlane, 1==ArduCopter, 2==INAVPlane, 3==INAVCopter. Used for flight modes
 #define STORE_GPS_LOCATION_IN_SUBTITLE_FILE                                 //comment out to disable. Stores GPS location in the goggles .srt file in place of the "uavBat:" field at a slow rate of ~2-3s per GPS coordinate
+//#define DISPLAY_THROTTLE_POSITION                                         //will display the current throttle position(0-100%) in place of the osd_roll_pids_pos element.
 
 #include <checksum.h>
 #include <mavlink.h>
@@ -96,6 +97,7 @@ uint8_t print_pause = 0;
 uint32_t previousMillis_FLM = 0;
 const uint32_t next_interval_FLM = 10000;
 uint8_t srtCounter = 1;
+uint8_t thr_position = 0;
 
 void setup()
 {
@@ -257,7 +259,8 @@ void mavl_receive()
             airspeed = vfr_hud.airspeed; //float
             groundspeed = vfr_hud.groundspeed; //float
             heading = vfr_hud.heading;
-
+            thr_position = (uint8_t)vfr_hud.throttle;
+            
             }
             break;
 
@@ -324,6 +327,9 @@ msp_raw_gps_t raw_gps = {0};
 //msp_comp_gps_t comp_gps = {0};
 msp_attitude_t attitude = {0};
 //msp_altitude_t altitude = {0};
+#ifdef DISPLAY_THROTTLE_POSITION
+msp_pid_t pid = {0};
+#endif
 
 void send_msp_to_airunit()
 {
@@ -436,6 +442,13 @@ else if(print_pause == 1){
     //MSP_ALTITUDE
     // altitude.estimatedActualPosition = altitude_msp; //cm
     // msp.send(MSP_ALTITUDE, &altitude, sizeof(altitude));
+
+#ifdef DISPLAY_THROTTLE_POSITION
+    //MSP_PID_CONFIG
+
+    pid.roll[0] = thr_position;
+    msp.send(MSP_PID, &pid, sizeof(pid));
+#endif
 
     //MSP_OSD_CONFIG
     send_osd_config();
