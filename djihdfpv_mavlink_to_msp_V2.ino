@@ -18,11 +18,7 @@
 #define STORE_GPS_LOCATION_IN_SUBTITLE_FILE                                 //comment out to disable. Stores GPS location in the goggles .srt file in place of the "uavBat:" field at a slow rate of ~2-3s per GPS coordinate
 //#define DISPLAY_THROTTLE_POSITION                                         //will display the current throttle position(0-100%) in place of the osd_roll_pids_pos element.
 
-#include <checksum.h>
-#include <mavlink.h>
-#include <mavlink_helpers.h>
-#include <mavlink_types.h>
-#include <protocol.h>
+#include <GCS_MAVLink.h>
 #include <MSP.h>
 #include "MSP_OSD.h"
 #include "flt_modes.h"
@@ -150,7 +146,7 @@ void loop()
 
     if((system_status == MAV_STATE_CRITICAL || system_status == MAV_STATE_EMERGENCY) && (general_counter % 800 == 0))
     {
-        char failsafe[15] = {'F','A','I','L','S','A','F','E'};
+        char failsafe[15] = {'F','A','I','L','S','A','F','E',0};
         show_text(&failsafe, 500);
     }
 
@@ -394,7 +390,7 @@ else if(print_pause == 1){
         str = str + (abs(gps_lat)/10) + "" + (abs(gps_lon)/10);
         char m[] = {str[srtCounter-1], str[srtCounter]};
         battery_state.legacyBatteryVoltage = atoi(m);
-        if(srtCounter <= 14)srtCounter += 2;
+        if(srtCounter <= (str.length()-2))srtCounter += 2;
           else srtCounter = 0;
     }
     else if(general_counter % 400 == 0 && srtCounter < 1){
@@ -454,9 +450,10 @@ else if(print_pause == 1){
     send_osd_config();
 }
 
+msp_osd_config_t msp_osd_config = {0};
+
 void send_osd_config()
 {
-    msp_osd_config_t msp_osd_config = {0};
 
     msp_osd_config.osd_item_count = 56;
     msp_osd_config.osd_stat_count = 24;
