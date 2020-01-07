@@ -17,6 +17,7 @@ const uint16_t osd_main_batt_voltage_pos = 234;
 const uint16_t osd_pitch_angle_pos = 2488;
 const uint16_t osd_roll_angle_pos = 2456;
 const uint16_t osd_crosshairs_pos = 234;
+const uint16_t osd_numerical_vario_pos = 2532;
 
 //not implemented or not available
 const uint16_t osd_throttle_pos_pos = 234;
@@ -39,7 +40,6 @@ const uint16_t osd_disarmed_pos = 234;
 const uint16_t osd_home_dir_pos = 234;
 const uint16_t osd_home_dist_pos = 234;
 const uint16_t osd_numerical_heading_pos = 234;
-const uint16_t osd_numerical_vario_pos = 234;
 const uint16_t osd_compass_bar_pos = 234;
 const uint16_t osd_esc_tmp_pos = 234;
 const uint16_t osd_esc_rpm_pos = 234;
