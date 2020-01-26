@@ -418,7 +418,8 @@ void send_msp_to_airunit()
     if(directionToHomeNorm > 360)directionToHomeNorm -= 360;
 
     String dir = "";
-    if(directionToHomeNorm <= 22.5)dir = "↑";
+    if(directionToHomeNorm <= 2)dir = "⬆";
+    else if(directionToHomeNorm <= 22.5)dir = "↑";
     else if(directionToHomeNorm <= 67.5)dir = "↗";
     else if(directionToHomeNorm <= 112.5)dir = "→";
     else if(directionToHomeNorm <= 157.5)dir = "↘";
@@ -426,7 +427,8 @@ void send_msp_to_airunit()
     else if(directionToHomeNorm <= 247.5)dir = "↙";
     else if(directionToHomeNorm <= 292.5)dir = "←";
     else if(directionToHomeNorm <= 337.5)dir = "↖";
-    else if(directionToHomeNorm <= 360)dir = "↑";
+    else if(directionToHomeNorm <= 358)dir = "↑";
+    else if(directionToHomeNorm <= 360)dir = "⬆";
     
 if(print_pause == 0){
   #ifdef IMPERIAL_UNITS

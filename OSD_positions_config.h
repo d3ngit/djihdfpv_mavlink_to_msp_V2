@@ -15,7 +15,7 @@ const uint16_t osd_mah_drawn_pos = 2136;
 uint16_t osd_gps_sats_pos = 2465;
 const uint16_t osd_main_batt_voltage_pos = 234;
 const uint16_t osd_pitch_angle_pos = 2488;
-const uint16_t osd_roll_angle_pos = 234;
+const uint16_t osd_roll_angle_pos = 2456;
 const uint16_t osd_crosshairs_pos = 234;
 const uint16_t osd_numerical_vario_pos = 2532;
 
