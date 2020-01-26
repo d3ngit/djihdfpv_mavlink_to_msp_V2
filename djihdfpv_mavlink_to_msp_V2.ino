@@ -200,27 +200,29 @@ void display_wind_speed_and_direction()
     if(relative_wind_direction < 0)relative_wind_direction += 360;
     if(relative_wind_direction > 360)relative_wind_direction -= 360;
 
-    if((general_counter % 16000 == 0))
+    String dir = "";
+
+    if(relative_wind_direction <= 22.5)dir = "↓";
+    else if(relative_wind_direction <= 67.5)dir = "↙";
+    else if(relative_wind_direction <= 112.5)dir = "←";
+    else if(relative_wind_direction <= 157.5)dir = "↖";
+    else if(relative_wind_direction <= 202.5)dir = "↑";
+    else if(relative_wind_direction <= 247.5)dir = "↗";
+    else if(relative_wind_direction <= 292.5)dir = "→";
+    else if(relative_wind_direction <= 337.5)dir = "↘";
+    else if(relative_wind_direction <= 360)dir = "↓";
+
+    if((general_counter % 14000 == 0))
     {
       String w = "";
-      w = w + "WS: ";
       #ifdef SPEED_IN_KILOMETERS_PER_HOUR
-          w = w + (wind_speed * 3.6) + " km/h";
+          w = w + dir + " " + (wind_speed * 3.6) + " km/h";
       #elif defined(SPEED_IN_MILES_PER_HOUR)
-          w = w + (wind_speed * 2.2369) + " mph";
+          w = w + dir + " " + (wind_speed * 2.2369) + " mph";
       #else
-          w = w + wind_speed + " m/s";         
+          w = w + dir + " " + wind_speed + " m/s";
       #endif
       
-      char wind[15] = {0};
-      w.toCharArray(wind, 15);
-      show_text(&wind, 2000);
-    }
-
-    if((general_counter % 14000 == 0)) 
-    {
-      String w = "";
-      w = w + "WD: " + relative_wind_direction;
       char wind[15] = {0};
       w.toCharArray(wind, 15);
       show_text(&wind, 2000);
@@ -411,19 +413,37 @@ void send_msp_to_airunit()
 #ifdef USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED
     String cnameStr = "";
 
+    uint16_t directionToHomeNorm = 360 + (directionToHome - heading);
+    if(directionToHomeNorm < 0)directionToHomeNorm += 360;
+    if(directionToHomeNorm > 360)directionToHomeNorm -= 360;
+
+    String dir = "";
+    if(directionToHomeNorm <= 22.5)dir = "↑";
+    else if(directionToHomeNorm <= 67.5)dir = "↗";
+    else if(directionToHomeNorm <= 112.5)dir = "→";
+    else if(directionToHomeNorm <= 157.5)dir = "↘";
+    else if(directionToHomeNorm <= 202.5)dir = "↓";
+    else if(directionToHomeNorm <= 247.5)dir = "↙";
+    else if(directionToHomeNorm <= 292.5)dir = "←";
+    else if(directionToHomeNorm <= 337.5)dir = "↖";
+    else if(directionToHomeNorm <= 360)dir = "↑";
+    
 if(print_pause == 0){
   #ifdef IMPERIAL_UNITS
-    cnameStr = cnameStr + "A:" + ((int16_t)(relative_alt  / 1000 / 0.3048));
+    cnameStr = cnameStr + "A" + ((int16_t)(relative_alt  / 1000 / 0.3048));
   #else
-    cnameStr = cnameStr + "A:" + (relative_alt  / 1000);                 //int32_t in milimeters -> converted to meters
+    cnameStr = cnameStr + "A" + (relative_alt  / 1000);                 //int32_t in milimeters -> converted to meters
   #endif
 
   #ifdef SPEED_IN_KILOMETERS_PER_HOUR
-    cnameStr = cnameStr + " S:" + ((uint16_t)(groundspeed * 3.6));
+    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed * 3.6));
+    cnameStr = cnameStr + " " + dir;
   #elif defined(SPEED_IN_MILES_PER_HOUR)
-    cnameStr = cnameStr + " S:" + ((uint16_t)(groundspeed * 2.2369));
+    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed * 2.2369));
+    cnameStr = cnameStr + " " + dir;
   #else
-    cnameStr = cnameStr + " S:" + ((uint16_t)(groundspeed));             //meters per second
+    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed));             //meters per second
+    cnameStr = cnameStr + " " + dir;
   #endif
 
     cnameStr.toCharArray(name.craft_name, sizeof(craftname));
