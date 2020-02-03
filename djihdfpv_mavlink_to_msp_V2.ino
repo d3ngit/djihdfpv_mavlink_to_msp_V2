@@ -548,6 +548,12 @@ msp_osd_config_t msp_osd_config = {0};
 
 void send_osd_config()
 {
+  
+#ifdef IMPERIAL_UNITS
+    msp_osd_config.units = 0;
+#else
+    msp_osd_config.units = 1;
+#endif
 
     msp_osd_config.osd_item_count = 56;
     msp_osd_config.osd_stat_count = 24;
