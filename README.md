@@ -1,5 +1,5 @@
 
-#DJI HD FPV Mavlink to MSP - Full OSD for DJI firmware version V01.00.0400
+#DJI HD FPV Mavlink to MSP - Full OSD for DJI firmware version V01.00.0500
 
 Converts Ardupilot Mavlink telemetry data to MSP telemetry data compatible with the DJI HD FPV system.
 # 

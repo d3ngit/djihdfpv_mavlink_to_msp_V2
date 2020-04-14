@@ -10,9 +10,6 @@
 #define SERIAL_TYPE                                                 0       //0==SoftSerial(Arduino_Nano), 1==HardSerial(others)
 #define MAH_CALIBRATION_FACTOR                                      1.0f    //used to calibrate mAh reading.
 #define SPEED_IN_KILOMETERS_PER_HOUR                                        //if commented out defaults to m/s
-//#define SPEED_IN_MILES_PER_HOUR
-#define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the current flight mode.
-#define USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME             //comment out to disable
 //#define IMPERIAL_UNITS                                                    //Altitude in feet, distance to home in miles.
 #define VEHICLE_TYPE                                                0       //0==ArduPlane, 1==ArduCopter, 2==INAVPlane, 3==INAVCopter. Used for flight modes
 #define STORE_GPS_LOCATION_IN_SUBTITLE_FILE                                 //comment out to disable. Stores GPS location in the goggles .srt file in place of the "uavBat:" field at a slow rate of ~2-3s per GPS coordinate
@@ -88,9 +85,7 @@ uint8_t set_home = 1;
 uint32_t general_counter = 0;
 uint16_t blink_sats_orig_pos = osd_gps_sats_pos;
 uint16_t blink_sats_blank_pos = 234;
-int32_t textCounter = 0;
 uint32_t previousFlightMode = custom_mode;
-uint8_t print_pause = 0;
 uint8_t srtCounter = 1;
 uint8_t thr_position = 0;
 float wind_direction = 0;   // wind direction (degrees)
@@ -124,24 +119,19 @@ void loop()
         send_msp_to_airunit();
         
         general_counter += next_interval_MSP;
-        if(textCounter > 0)textCounter -= next_interval_MSP;
-    }
-
-    if(textCounter <= 0){
-        print_pause = 0;
     }
 
     if(custom_mode != previousFlightMode){
         previousFlightMode = custom_mode;
-        display_flight_mode(1000);
+        display_flight_mode();
     }
 
     if(batteryCellCount == 0 && vbat > 0)set_battery_cells_number();
 
     check_system_status();
 
-    //display flight mode every 10s for 0.5s
-    if (general_counter % 10000 == 0)display_flight_mode(500);
+    //display flight mode every 10s
+    if (general_counter % 10000 == 0)display_flight_mode();
 
     //set GPS home when 3D fix
     if(fix_type > 2 && set_home == 1 && gps_lat != 0 && gps_lon != 0 && numSat > 5){
@@ -155,7 +145,6 @@ void loop()
 #ifdef DISPLAY_WIND_SPEED_AND_DIRECTION
         display_wind_speed_and_direction();
 #endif            
-
 }
 
 void check_system_status()
@@ -163,17 +152,17 @@ void check_system_status()
     if(system_status == MAV_STATE_CRITICAL && (general_counter % 800 == 0)) 
     {
       char failsafe[15] = {"FAILSAFE"};
-      show_text(&failsafe, 500);
+      show_text(&failsafe);
     }
     if(system_status == MAV_STATE_EMERGENCY && (general_counter % 800 == 0)) 
     {
       char em[15] = {"EMERGENCY"};
-      show_text(&em, 500);
+      show_text(&em);
     }
     if(system_status == MAV_STATE_CALIBRATING && (general_counter % 800 == 0)) 
     {
       char calib[15] = {"CALIBRATING"};
-      show_text(&calib, 500);
+      show_text(&calib);
     }
 }
 
@@ -212,22 +201,21 @@ void display_wind_speed_and_direction()
     else if(relative_wind_direction <= 337.5)dir = "↘";
     else if(relative_wind_direction <= 360)dir = "↓";
 
-    if((general_counter % 14000 == 0))
+    if((general_counter % 4000 == 0))
     {
       String w = "";
-      #ifdef SPEED_IN_KILOMETERS_PER_HOUR
-          w = w + dir + " " + (wind_speed * 3.6) + " km/h";
-      #elif defined(SPEED_IN_MILES_PER_HOUR)
+      #ifdef IMPERIAL_UNITS
           w = w + dir + " " + (wind_speed * 2.2369) + " mph";
+      #elif defined(SPEED_IN_KILOMETERS_PER_HOUR)
+          w = w + dir + " " + (wind_speed * 3.6) + " km/h";
       #else
           w = w + dir + " " + wind_speed + " m/s";
       #endif
       
       char wind[15] = {0};
       w.toCharArray(wind, 15);
-      show_text(&wind, 2000);
+      show_text(&wind);
     }
-
 }
 
 void set_flight_mode_flags()
@@ -268,17 +256,9 @@ void set_battery_cells_number()
     else if(vbat < 255)batteryCellCount = 6;
 }
 
-void save_text(char (*text)[15])
+void show_text(char (*text)[15])
 {
     memcpy(craftname, *text, sizeof(craftname));
-}
-
-void show_text(char (*text)[15], uint32_t textTimeMS)
-{
-    print_pause = 1;
-    textCounter = textTimeMS;
-
-    save_text(&(*text));
 }
 
 void mavl_receive()
@@ -393,7 +373,7 @@ msp_name_t name = {0};
 msp_status_BF_t status_BF = {0};
 msp_analog_t analog = {0};
 msp_raw_gps_t raw_gps = {0};
-//msp_comp_gps_t comp_gps = {0};
+msp_comp_gps_t comp_gps = {0};
 msp_attitude_t attitude = {0};
 msp_altitude_t altitude = {0};
 #ifdef DISPLAY_THROTTLE_POSITION
@@ -410,53 +390,7 @@ void send_msp_to_airunit()
     // msp.send(MSP_FC_VERSION, &fc_version, sizeof(fc_version));
 
     //MSP_NAME
-#ifdef USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED
-    String cnameStr = "";
-
-    uint16_t directionToHomeNorm = 360 + (directionToHome - heading);
-    if(directionToHomeNorm < 0)directionToHomeNorm += 360;
-    if(directionToHomeNorm > 360)directionToHomeNorm -= 360;
-
-    String dir = "";
-    if(directionToHomeNorm <= 2)dir = "⬆";
-    else if(directionToHomeNorm <= 22.5)dir = "↑";
-    else if(directionToHomeNorm <= 67.5)dir = "↗";
-    else if(directionToHomeNorm <= 112.5)dir = "→";
-    else if(directionToHomeNorm <= 157.5)dir = "↘";
-    else if(directionToHomeNorm <= 202.5)dir = "↓";
-    else if(directionToHomeNorm <= 247.5)dir = "↙";
-    else if(directionToHomeNorm <= 292.5)dir = "←";
-    else if(directionToHomeNorm <= 337.5)dir = "↖";
-    else if(directionToHomeNorm <= 358)dir = "↑";
-    else if(directionToHomeNorm <= 360)dir = "⬆";
-    
-if(print_pause == 0){
-  #ifdef IMPERIAL_UNITS
-    cnameStr = cnameStr + "A" + ((int16_t)(relative_alt  / 1000 / 0.3048));
-  #else
-    cnameStr = cnameStr + "A" + (relative_alt  / 1000);                 //int32_t in milimeters -> converted to meters
-  #endif
-
-  #ifdef SPEED_IN_KILOMETERS_PER_HOUR
-    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed * 3.6));
-    cnameStr = cnameStr + " " + dir;
-  #elif defined(SPEED_IN_MILES_PER_HOUR)
-    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed * 2.2369));
-    cnameStr = cnameStr + " " + dir;
-  #else
-    cnameStr = cnameStr + " S" + ((uint16_t)(groundspeed));             //meters per second
-    cnameStr = cnameStr + " " + dir;
-  #endif
-
-    cnameStr.toCharArray(name.craft_name, sizeof(craftname));
-}
-else if(print_pause == 1){
     memcpy(name.craft_name, craftname, sizeof(craftname));
-}
-#else
-    memcpy(name.craft_name, craftname, sizeof(craftname));
-#endif
-
     msp.send(MSP_NAME, &name, sizeof(name));
 
     //MSP_STATUS
@@ -499,43 +433,27 @@ else if(print_pause == 1){
     raw_gps.lat = gps_lat;
     raw_gps.lon = gps_lon;
     raw_gps.numSat = numSat;
-    //raw_gps.alt = (int16_t)altitude_msp;
-    //raw_gps.groundSpeed = (int16_t)groundspeed;
+    raw_gps.alt = relative_alt / 10;
+    raw_gps.groundSpeed = (int16_t)(groundspeed * 100);
     msp.send(MSP_RAW_GPS, &raw_gps, sizeof(raw_gps));
 
     //MSP_COMP_GPS
-    // comp_gps.distanceToHome = (int16_t)distanceToHome;
-    // comp_gps.directionToHome = directionToHome;
-    // msp.send(MSP_COMP_GPS, &comp_gps, sizeof(comp_gps));
+    comp_gps.distanceToHome = (int16_t)distanceToHome;
+    comp_gps.directionToHome = directionToHome - heading;
+    msp.send(MSP_COMP_GPS, &comp_gps, sizeof(comp_gps));
 
     //MSP_ATTITUDE
-#ifdef USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME
-    #ifdef IMPERIAL_UNITS
-        distanceToHome = (uint32_t)((distanceToHome * 0.000621371192) * 10);  //meters to miles
-        attitude.pitch = (int16_t)distanceToHome;
-    #else
-        if(distanceToHome > 1000){
-            attitude.pitch = (int16_t)(distanceToHome / 100); // switch from m to km when over 1000
-        }
-        else{
-            attitude.pitch = (int16_t)(distanceToHome * 10);
-        }
-    #endif
-    attitude.roll = (directionToHome - heading) * 10;
-#else
     attitude.pitch = pitch_angle;
     attitude.roll = roll_angle;
-#endif
     msp.send(MSP_ATTITUDE, &attitude, sizeof(attitude));
 
     //MSP_ALTITUDE
-    // altitude.estimatedActualPosition = altitude_msp; //cm
+    altitude.estimatedActualPosition = relative_alt / 10; //cm
     altitude.estimatedActualVelocity = (int16_t)(climb_rate * 100); //m/s to cm/s    
     msp.send(MSP_ALTITUDE, &altitude, sizeof(altitude));
 
 #ifdef DISPLAY_THROTTLE_POSITION
     //MSP_PID_CONFIG
-
     pid.roll[0] = thr_position;
     msp.send(MSP_PID, &pid, sizeof(pid));
 #endif
@@ -631,28 +549,28 @@ void invert_pos(uint16_t *pos1, uint16_t *pos2)
     *pos2 = tmp_pos;
 }
 
-void display_flight_mode(uint32_t timeAmountMS)
+void display_flight_mode()
 {
 
     #if VEHICLE_TYPE == 0
     char txt[15];
     strcpy_P(txt, arduPlaneModeStr[custom_mode]);
-    show_text(&txt, timeAmountMS);
+    show_text(&txt);
 
     #elif VEHICLE_TYPE == 1
     char txt[15];
     strcpy_P(txt, arduCopterModeStr[custom_mode]);
-    show_text(&txt, timeAmountMS);
+    show_text(&txt);
 
     #elif VEHICLE_TYPE == 2
     char txt[15];
     strcpy_P(txt, inavPlaneModeStr[custom_mode]);
-    show_text(&txt, timeAmountMS);
+    show_text(&txt);
 
     #elif VEHICLE_TYPE == 3
     char txt[15];
     strcpy_P(txt, inavCopterModeStr[custom_mode]);
-    show_text(&txt, timeAmountMS);
+    show_text(&txt);
 
     #endif
 
